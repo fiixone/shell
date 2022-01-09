@@ -1,0 +1,169 @@
+#!/bin/env bash
+# ====================================================
+#   Copyright © 2022  All rights reserved.
+#
+#   Author        : Fiix.one
+#   Email         :
+#   File Name     : dashboard
+#   Last Modified : 2021-03-05 09:44
+#   Describe      :
+#
+# ====================================================
+##  Usage:
+##      -             进入控制台(需先启用控制台)
+##      -x            启用横版控制台
+##      -y            启用竖版控制台
+##      -k            关闭控制台
+##
+set -e
+# tmux状态栏命名，可自定义
+name_session="Miner"
+name_window_S="Status"
+name_window_0="Log"
+name_window_1="Status"
+name_window_2="Top"
+
+# 脚本引用屏幕布局模式
+# (x水平/y垂直放置屏幕,固定模式可注释对应变量)
+#layout_mode="x"
+#layout_mode="y"
+layout_mode="$1"
+
+
+_chk_tmux() {
+    if [[ ! $(command -v tmux) ]] ;then
+        echo "This Script Need <tmux>'"
+        return 1
+    fi
+}
+
+_help() {
+    sed -rn 's/^## ?//;T;p' "$0"
+    return 1
+}
+
+
+# 启动判断函数
+
+_main(){
+    if ! tmux has-session -t $name_session >/dev/null 2>&1; then
+            case $layout_mode in
+            -x) _layout_x
+            ;;
+            -y) _layout_y
+            ;;
+            *) _help
+            ;;
+            esac
+        else
+            case $layout_mode in
+            -k) tmux kill-session -t Miner
+            ;;
+            *) tmux attach -t $name_session
+            ;;
+            esac
+#        tmux attach -t $name_session
+    fi
+}
+
+
+# 布局函数
+
+_tmux_start(){
+    tmux new-session -t $name_session  -d
+    tmux rename-session -t $name_session  $name_session
+}
+
+_tmux_end(){
+    # 切换到指定编号的窗口
+    tmux select-window -t $name_window_S
+    tmux attach -t $name_session
+}
+
+
+_layout_x(){
+    _tmux_start
+
+    # Window 0
+    # 重命名window
+    tmux rename-window -t $name_session $name_window_0
+    tmux send-keys -t $name_session "PS1='[Log]:'" C-m
+    tmux send-keys -t $name_session "cd /var/log/lotus/" C-m
+    tmux send-keys -t $name_session "clear" C-m
+
+    # Window 1
+    # 创建指定名称的window
+    tmux new-window -n $name_window_1
+    tmux split-window -h -p 80 -t $name_session
+    tmux select-pane -L
+    tmux send-keys -t $name_session "PS1='[Seal/Cache]:'" C-m
+    tmux send-keys -t $name_session "cd /seal-pool/" C-m
+    tmux send-keys -t $name_session "clear" C-m
+    tmux send-keys -t $name_session "tree -h -i" C-m
+    tmux select-pane -R
+    tmux split-window -v  -t $name_session
+    tmux select-pane -U
+    tmux send-keys -t $name_session "watch -n 30 -t 'lotus-miner sealing jobs'" C-m
+    tmux split-window -v  -t $name_session
+    tmux send-keys -t $name_session "PS1='[List]:'" C-m
+    tmux send-keys -t $name_session "clear" C-m
+    tmux send-keys -t $name_session "lotus-miner sectors list" C-m
+    tmux select-pane -D
+    tmux send-keys -t $name_session "PS1='[Info]:'" C-m
+    tmux send-keys -t $name_session "clear" C-m
+    tmux send-keys -t $name_session "lotus-miner info" C-m
+
+    # Window 2
+    tmux new-window -n $name_window_2
+    tmux send-keys -t $name_session "htop" C-m
+    # 划分左右两个窗格
+    tmux split-window -h -p 50 -t $name_session
+    tmux send-keys -t $name_session "nvtop" C-m
+
+    _tmux_end
+    }
+
+_layout_y(){
+    _tmux_start
+
+    # Window 0
+    # 重命名window
+    tmux rename-window -t $name_session $name_window_0
+    tmux send-keys -t $name_session "PS1='[Log]:'" C-m
+    tmux send-keys -t $name_session "cd /var/log/lotus/" C-m
+    tmux send-keys -t $name_session "clear" C-m
+
+    # Window 1
+    # 创建指定名称的window
+    tmux new-window -n $name_window_1
+    tmux split-window -h -p 64 -t $name_session
+    tmux select-pane -L
+    tmux send-keys -t $name_session "PS1='[Seal/Cache]:'" C-m
+    tmux send-keys -t $name_session "cd /seal/pool/" C-m
+    tmux send-keys -t $name_session "clear" C-m
+    tmux send-keys -t $name_session "tree -h -i" C-m
+    tmux select-pane -R
+    tmux split-window -v -p 85 -t $name_session
+    tmux select-pane -U
+    tmux send-keys -t $name_session "watch -n 30 -t 'lotus-miner sealing jobs'" C-m
+    tmux split-window -v -p 50 -t $name_session
+    tmux send-keys -t $name_session "PS1='[List]:'" C-m
+    tmux send-keys -t $name_session "clear" C-m
+    tmux send-keys -t $name_session "lotus-miner sectors list " C-m
+    tmux select-pane -D
+    tmux send-keys -t $name_session "PS1='[Info]:'" C-m
+    tmux send-keys -t $name_session "lotus-miner info " C-m
+
+    # Window 2
+    # 创建指定名称的window
+    tmux new-window -n $name_window_2
+    tmux send-keys -t $name_session "nvtop" C-m
+    # 划分上下两个窗格
+    tmux split-window -v -p 85 -t $name_session
+    tmux send-keys -t $name_session "htop" C-m
+
+    _tmux_end
+}
+
+_chk_tmux
+_main

@@ -1,0 +1,31 @@
+#!/bin/env bash
+# ====================================================
+#   Copyright © 2021  All rights reserved.
+#
+#   Author        : Fiix.one
+#   Email         :
+#   File Name     : shell.lib
+#   Last Modified : 2021-10-24 16:10
+#   Describe      :
+#
+# ====================================================
+
+_log() {
+    local logtype=$1
+    local text
+    local time_now
+    text="$(shift; echo "$@")"
+    time_now="$(date +'%F %H:%M:%S')"
+    case $logtype in
+        info)
+            echo -e "\033[32m[${time_now}] [Info]\t${text}\033[0m" ;;
+        erro)
+            echo -e "\033[31m[${time_now}] [Erro]\t${text}\033[0m" ;;
+        warn)
+            echo -e "\033[33m[${time_now}] [Warn]\t${text}\033[0m" ;;
+        *)
+            text="$*"
+            echo -e "[${time_now}] [Logs]\t${text}" ;;
+    esac
+}
+
